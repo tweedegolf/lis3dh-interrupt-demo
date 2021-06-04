@@ -1,0 +1,3 @@
+[submodule "lis3dh"]
+	path = lis3dh
+	url = git@tgrep.nl:global-tracks/lis3dh.git
