@@ -2,9 +2,7 @@ use nrf52840_hal as hal;
 
 use hal::{pac, Twim};
 
-use lis3dh::{
-    i2c::Lis3dh, Configuration as AccConfig, InterruptSource, IrqPin1Conf, SlaveAddr::Default,
-};
+use lis3dh::{Configuration as AccConfig, DataRate, InterruptSource, IrqPin1Conf, SlaveAddr::Alternate, i2c::Lis3dh};
 pub use lis3dh::{Interrupt1, Lis3dhImpl};
 
 type Twim0 = Twim<pac::TWIM0>;
@@ -20,12 +18,13 @@ pub fn config_acc(
         // Enable temperature readings. Device should run on 2V for temp sensor to work
         temp_en: false,
         // Continuously update data register
-        block_data_update: false,
+        block_data_update: true,
+        datarate: DataRate::PowerDown,
         ..AccConfig::default()
     };
 
     // Initialize accelerometer using the config, passing spim2 and RTC-based delay
-    let mut lis3dh: Lis3dhI2c = Lis3dh::new(twim, Default, config)?;
+    let mut lis3dh: Lis3dhI2c = Lis3dh::new(twim, Alternate, config)?;
 
     // Configure the threshold value for interrupt 1 to 1.1g
     lis3dh.configure_irq_threshold(Interrupt1, 69)?;
@@ -54,12 +53,15 @@ pub fn config_acc(
     lis3dh.configure_int_pin(IrqPin1Conf {
         // Raise if interrupt 1 is raised
         ia1_en: true,
+        zyxda_en: true,
         // Disable for all other interrupts
         ..IrqPin1Conf::default()
     })?;
 
     // Go to low power mode and wake up for 10*ODR if measurement above 1.1g is done
     lis3dh.configure_act(69, 10)?;
+
+    lis3dh.set_datarate(DataRate::Hz_400)?;
 
     Ok(lis3dh)
 }
