@@ -6,6 +6,9 @@ use lis3dh_irq_demo as _;
 use lis3dh_irq_demo::acc;
 use nrf52840_hal as hal;
 
+#[cfg(all(feature = "irq-drdy", feature = "irq-ths"))]
+compile_error!("Cannot use both the irq-ths and the irq-drdy feature at the same time");
+
 use hal::{
     gpio::{p0::Parts, Floating, Input, Level, Output, Pin, PushPull},
     gpiote::Gpiote,
@@ -73,9 +76,10 @@ const APP: () = {
     }
 
     // Defines what happens when there's nothing left to do
-    #[idle]
-    fn idle(_: idle::Context) -> ! {
+    #[idle(spawn = [read_print_acc])]
+    fn idle(ctx: idle::Context) -> ! {
         loop {
+            ctx.spawn.read_print_acc().ok();
             // Go to sleep, waiting for an interrupt
             cortex_m::asm::wfi();
         }
@@ -95,12 +99,7 @@ const APP: () = {
         let lis3dh = ctx.resources.lis3dh;
         use lis3dh::accelerometer::Accelerometer;
         let sample = lis3dh.accel_norm().unwrap();
-        defmt::info!(
-            "Ouch! Sample: x: {}, y: {}, z: {}",
-            sample.x,
-            sample.y,
-            sample.z
-        );
+        defmt::info!("Sample: x: {}, y: {}, z: {}", sample.x, sample.y, sample.z);
     }
 
     /// Hardware task for handling GPIOTE events
@@ -108,7 +107,7 @@ const APP: () = {
         binds = GPIOTE,
         priority = 5,
         resources = [gpiote],
-        spawn = [set_led_2_state, read_print_acc],
+        spawn = [set_led_2_state],
     )]
     fn on_gpiote(ctx: on_gpiote::Context) {
         let gpiote = ctx.resources.gpiote;
@@ -116,7 +115,6 @@ const APP: () = {
         if gpiote.channel0().is_event_triggered() {
             gpiote.channel0().reset_events();
             ctx.spawn.set_led_2_state(true).ok();
-            ctx.spawn.read_print_acc().ok();
         }
         if gpiote.channel1().is_event_triggered() {
             gpiote.channel1().reset_events();
