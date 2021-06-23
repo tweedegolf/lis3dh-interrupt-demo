@@ -9,6 +9,10 @@ use nrf52840_hal as hal;
 #[cfg(all(feature = "irq-drdy", feature = "irq-ths"))]
 compile_error!("Cannot use both the irq-ths and the irq-drdy feature at the same time");
 
+#[cfg(not(any(feature = "irq-drdy", feature = "irq-ths")))]
+compile_error!("Please enable either one of the features `irq-drdy` and `irq-ths`");
+
+
 use hal::{
     gpio::{p0::Parts, Floating, Input, Level, Output, Pin, PushPull},
     gpiote::Gpiote,
@@ -33,7 +37,7 @@ const APP: () = {
         lis3dh: Lis3dh<Twim<TWIM0>>,
     }
 
-    #[init]
+    #[init(spawn = [read_print_acc])]
     fn init(mut ctx: init::Context) -> init::LateResources {
         let port0 = Parts::new(ctx.device.P0);
         let led_1_pin = port0.p0_13.into_push_pull_output(Level::High).degrade();
