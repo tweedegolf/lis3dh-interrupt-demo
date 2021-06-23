@@ -60,7 +60,12 @@ pub fn config_acc(
             // Disable for all other interrupts
             ..IrqPin1Conf::default()
         })?;
+        // Go to low power mode and wake up for 10*ODR if measurement above 1.1g is done
+        lis3dh.configure_act(69, 10)?;
+
+        lis3dh.set_datarate(DataRate::Hz_400)?;
     }
+
     #[cfg(feature = "irq-drdy")]
     {
         // Congfigure IRQ source for interrupt 1
@@ -81,12 +86,8 @@ pub fn config_acc(
             // Disable for all other interrupts
             ..IrqPin1Conf::default()
         })?;
+        lis3dh.set_datarate(DataRate::Hz_1)?;
     }
-
-    // Go to low power mode and wake up for 10*ODR if measurement above 1.1g is done
-    lis3dh.configure_act(69, 10)?;
-
-    lis3dh.set_datarate(DataRate::Hz_400)?;
-
+   
     Ok(lis3dh)
 }
