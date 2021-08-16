@@ -42,7 +42,7 @@ const APP: () = {
         let led_1_pin = port0.p0_13.into_push_pull_output(Level::High).degrade();
         let led_2_pin = port0.p0_14.into_push_pull_output(Level::High).degrade();
         let led_3_pin = port0.p0_15.into_push_pull_output(Level::High).degrade();
-        let int1_pin = port0.p0_28.into_floating_input().degrade();
+        let int1_pin = port0.p0_03.into_floating_input().degrade();
 
         let scl = port0.p0_31.into_floating_input().degrade();
         let sda = port0.p0_30.into_floating_input().degrade();
