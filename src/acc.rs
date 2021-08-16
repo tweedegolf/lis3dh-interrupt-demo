@@ -1,32 +1,21 @@
-use nrf52840_hal as hal;
+use lis3dh::{Configuration as AccConfig, DataRate, IrqPin1Conf, Lis3dh, SlaveAddr};
+pub use lis3dh::{Interrupt1, Lis3dhI2C};
 
-use hal::{pac, Twim};
+use embedded_hal::blocking::i2c::{self, WriteRead};
 
-use lis3dh::{
-    i2c::Lis3dh, Configuration as AccConfig, DataRate, InterruptSource, IrqPin1Conf, SlaveAddr,
-};
-pub use lis3dh::{Interrupt1, Lis3dhImpl};
-
-type Twim0 = Twim<pac::TWIM0>;
-type Lis3dhI2c = Lis3dh<Twim0>;
-
-pub fn config_acc(
-    twim: Twim0,
-) -> Result<
-    Lis3dhI2c,
-    lis3dh::Error<<Lis3dhI2c as Lis3dhImpl>::BusError, <Lis3dhI2c as Lis3dhImpl>::PinError>,
-> {
+pub fn config_acc<Twim, E>(
+    twim: Twim,
+) -> Result<Lis3dh<Lis3dhI2C<Twim>>, lis3dh::Error<E, core::convert::Infallible>>
+where
+    Twim: WriteRead<Error = E> + i2c::Write<Error = E>,
+{
     let config = AccConfig {
-        // Enable temperature readings. Device should run on 2V for temp sensor to work
-        temp_en: false,
-        // Continuously update data register
-        block_data_update: true,
         datarate: DataRate::PowerDown,
         ..AccConfig::default()
     };
 
-    // Initialize accelerometer using the config, passing spim2 and RTC-based delay
-    let mut lis3dh: Lis3dhI2c = Lis3dh::new(twim, SlaveAddr::Default, config)?;
+    // Initialize accelerometer using the config
+    let mut lis3dh = Lis3dh::new_i2c_with_config(twim, SlaveAddr::Default, config)?;
 
     // Configure the threshold value for interrupt 1 to 1.1g
     lis3dh.configure_irq_threshold(Interrupt1, 69)?;
@@ -40,28 +29,19 @@ pub fn config_acc(
         // Congfigure IRQ source for interrupt 1
         lis3dh.configure_irq_src(
             Interrupt1,
-            InterruptSource {
-                // use _or_ combnination, so interrupt is raised
-                // if any one of the axes is above threshold
-                and_or_combination: false,
-                // Enable all axes, both high and low,
-                // and activate the interrupt
-                ..InterruptSource::all()
-            },
-            // latch irq line until src_register is read
-            false,
-            false,
+            lis3dh::InterruptMode::OrCombination,
+            lis3dh::InterruptConfig::high_and_low(),
         )?;
 
         // Configure IRQ pin 1
-        lis3dh.configure_int_pin(IrqPin1Conf {
+        lis3dh.configure_interrupt_pin(IrqPin1Conf {
             // Raise if interrupt 1 is raised
             ia1_en: true,
             // Disable for all other interrupts
             ..IrqPin1Conf::default()
         })?;
         // Go to low power mode and wake up for 10*ODR if measurement above 1.1g is done
-        lis3dh.configure_act(69, 10)?;
+        lis3dh.configure_switch_to_low_power(69, 10)?;
 
         lis3dh.set_datarate(DataRate::Hz_400)?;
     }
@@ -71,14 +51,12 @@ pub fn config_acc(
         // Congfigure IRQ source for interrupt 1
         lis3dh.configure_irq_src(
             Interrupt1,
-            InterruptSource::default(),
-            // latch irq line until src_register is read
-            false,
-            false,
+            lis3dh::InterruptMode::OrCombination,
+            lis3dh::InterruptConfig::high_and_low(),
         )?;
 
         // Configure IRQ pin 1
-        lis3dh.configure_int_pin(IrqPin1Conf {
+        lis3dh.configure_interrupt_pin(IrqPin1Conf {
             // Raise if interrupt 1 is raised
             ia1_en: true,
             // Rais interrupt 1 if accelerometer data is ready
@@ -88,6 +66,6 @@ pub fn config_acc(
         })?;
         lis3dh.set_datarate(DataRate::Hz_1)?;
     }
-   
+
     Ok(lis3dh)
 }

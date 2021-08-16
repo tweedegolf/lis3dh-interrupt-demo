@@ -1,7 +1,7 @@
 #![no_std]
 #![no_main]
 
-use lis3dh::i2c::Lis3dh;
+use lis3dh::{Lis3dh, Lis3dhI2C};
 use lis3dh_irq_demo as _;
 use lis3dh_irq_demo::acc;
 use nrf52840_hal as hal;
@@ -11,7 +11,6 @@ compile_error!("Cannot use both the irq-ths and the irq-drdy feature at the same
 
 #[cfg(not(any(feature = "irq-drdy", feature = "irq-ths")))]
 compile_error!("Please enable either one of the features `irq-drdy` and `irq-ths`");
-
 
 use hal::{
     gpio::{p0::Parts, Floating, Input, Level, Output, Pin, PushPull},
@@ -34,7 +33,7 @@ const APP: () = {
         led_1_pin: Pin<Output<PushPull>>,
         led_2_pin: Pin<Output<PushPull>>,
         led_3_pin: Pin<Output<PushPull>>,
-        lis3dh: Lis3dh<Twim<TWIM0>>,
+        lis3dh: Lis3dh<Lis3dhI2C<Twim<TWIM0>>>,
     }
 
     #[init(spawn = [read_print_acc])]
@@ -43,10 +42,10 @@ const APP: () = {
         let led_1_pin = port0.p0_13.into_push_pull_output(Level::High).degrade();
         let led_2_pin = port0.p0_14.into_push_pull_output(Level::High).degrade();
         let led_3_pin = port0.p0_15.into_push_pull_output(Level::High).degrade();
-        let int1_pin = port0.p0_02.into_floating_input().degrade();
+        let int1_pin = port0.p0_28.into_floating_input().degrade();
 
-        let scl = port0.p0_27.into_floating_input().degrade();
-        let sda = port0.p0_26.into_floating_input().degrade();
+        let scl = port0.p0_31.into_floating_input().degrade();
+        let sda = port0.p0_30.into_floating_input().degrade();
         let twim0 = Twim::new(
             ctx.device.TWIM0,
             Pins { scl, sda },
