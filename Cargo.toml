@@ -26,8 +26,8 @@ embedded-hal = "0.2.5"
 # set logging levels here
 default = [
   "defmt-default",
-  "irq-ths",
-  # "irq-drdy",
+  # "irq-ths",
+  "irq-drdy",
   # "dependency-a/defmt-trace",
 ]
 

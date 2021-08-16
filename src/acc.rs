@@ -51,7 +51,7 @@ where
         // Congfigure IRQ source for interrupt 1
         lis3dh.configure_irq_src(
             Interrupt1,
-            lis3dh::InterruptMode::OrCombination,
+            lis3dh::InterruptMode::Movement,
             lis3dh::InterruptConfig::high_and_low(),
         )?;
 
